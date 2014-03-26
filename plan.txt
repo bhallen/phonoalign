@@ -1,0 +1,15 @@
+How can the "correct" alignments of all the following cases be produced by the same system?
+
+b u x _ _
+b y c e r
+NOT: b _ _ y c e r / b u x _ _ _ _
+
+k o e r u _ _
+k o e _ _ t a
+(or the opposite)
+NOT: [r]~[t] and [u]~[a]
+
+y o m u _ _ _ _ _
+y o m _ i m a s u
+(or maybe [u]~[i] + suffix?)
+NOT: infixation of [mas]
