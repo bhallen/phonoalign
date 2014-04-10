@@ -179,30 +179,3 @@ class Aligner(object):
 
         print(' '.join(top_list))
         print(' '.join(bottom_list))
-
-
-    def morpho_related(self, alignment, s1, s2):
-        core = []
-        adding = 0
-        for chunk in alignment:
-            if not adding:
-                if chunk['elem1'] != None and chunk['elem2'] != None:
-                    adding = 1
-                    core.append(chunk)
-            elif adding:
-                if chunk['elem1'] == None or chunk['elem2'] == None:
-                    break
-                else:
-                    core.append(chunk)
-
-        def acceptable_chunk(chunk, s1, s2): # refactor this function.
-            if chunk['elem1'] == chunk['elem2'] and chunk['elem1'] not in [s1,s2] and chunk['elem2'] not in [s1,s2]:
-                return True
-            elif chunk['elem1'] == s1 and chunk['elem2'] == s2:
-                return True
-            elif chunk['elem2'] == s1 and chunk['elem1'] == s2:
-                return True
-            else:
-                return False
-
-        return all([acceptable_chunk(chunk, s1, s2) for chunk in core])
