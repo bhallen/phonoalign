@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-## Based on aligner.js (by Michael Becker and Blake Allen)
+## Based on learner.js (by Michael Becker and Blake Allen)
 
 
 class Change(object):
