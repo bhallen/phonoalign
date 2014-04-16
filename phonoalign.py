@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import aligner
+import hypothesize
 
 
 al = aligner.Aligner(feature_file='ex_features.txt', tolerance=2.0)
@@ -15,7 +16,7 @@ with open('english_sS_pairs.txt', 'U') as test_file:
         alignments = al.align(*[form.split(' ') for form in pair])
         # print(alignments)
         for alignment in alignments:
-            print(al.morpho_related(alignment, 's', 'sh'))
-        #     al.display_alignment(alignment)
-        #     print('')
-        # print('')
+            al.display_alignment(alignment)
+            print(hypothesize.find_changes(alignment))
+            print('')
+        print('')
