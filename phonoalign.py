@@ -17,6 +17,10 @@ with open('english_sS_pairs.txt', 'U') as test_file:
         # print(alignments)
         for alignment in alignments:
             al.display_alignment(alignment)
-            print(hypothesize.find_changes(alignment))
+            changes = hypothesize.find_basic_changes(alignment)
+            for c in changes:
+                cps = hypothesize.create_change_possibilities(c, alignment)
+                print(cps)
+                print('done')
             print('')
         print('')

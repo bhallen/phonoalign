@@ -22,7 +22,7 @@ class Change(object):
 
 
 
-def find_changes(alignment):
+def find_basic_changes(alignment):
     """Find the differences between the aligned base and derivative.
     Return differences as Changes with positive indices as positions.
     """
@@ -43,3 +43,18 @@ def find_changes(alignment):
             surface_i += 1
 
     return changes
+
+
+def create_change_possibilities(change, alignment, side='both'):
+    """Given a change with segments as input and output and a positive index as position,
+    return a list of changes with different positions/inputs/outputs.
+    """
+    change_possibilities = []
+    if side in ['left', 'both']:
+        change_possibilities.append(change)
+    if side in ['right', 'both']:
+        new_change = Change(change.change_type, -(len(alignment)*2-1-change.position), change.input_material, change.output_material)
+        change_possibilities.append(new_change)
+
+    return change_possibilities
+
