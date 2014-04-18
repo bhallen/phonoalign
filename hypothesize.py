@@ -4,6 +4,8 @@
 
 ## Based on learner.js (by Michael Becker and Blake Allen)
 
+import itertools
+
 
 class Change(object):
 
@@ -19,6 +21,39 @@ class Change(object):
 
     def __str__(self):
        return __repr__(self)
+
+
+class Hypothesis(object):
+
+    def __init__(self, changes, associated_forms):
+        self.changes = changes
+        self.associated_forms = associated_forms
+
+    def __repr__(self):
+        # needs aesthetic improvement
+        example_count = min(5, len(self.associated_forms))
+        return '{0}\n{1}...\n'.format(self.changes, [''.join([s for s in form['base'] if s != None]) for form in self.associated_forms[:example_count]])
+
+    def __str__(self):
+       return __repr__(self)
+
+
+
+
+
+def create_and_distill_hypotheses(alignments):
+
+    unfiltered_hypotheses = []
+    for alignment in alignments:
+        base = [column['elem1'] for column in alignment]
+        derivative = [column['elem2'] for column in alignment]
+        basic_changes = find_basic_changes(alignment)
+        possibilities_for_all_changes = [create_change_possibilities(c, alignment) for c in basic_changes]
+        product = list(itertools.product(*possibilities_for_all_changes))
+        for cp in product:
+            unfiltered_hypotheses.append(Hypothesis(cp, [{'base':base, 'derivative':derivative}]))
+
+    return unfiltered_hypotheses
 
 
 
