@@ -48,7 +48,8 @@ def create_and_distill_hypotheses(alignments):
         base = [column['elem1'] for column in alignment]
         derivative = [column['elem2'] for column in alignment]
         basic_changes = find_basic_changes(alignment)
-        possibilities_for_all_changes = [create_change_possibilities(c, alignment) for c in basic_changes]
+        grouped_changes = group_changes(basic_changes)
+        possibilities_for_all_changes = [create_change_possibilities(c, alignment) for c in grouped_changes]
         product = list(itertools.product(*possibilities_for_all_changes))
         for cp in product:
             unfiltered_hypotheses.append(Hypothesis(cp, [{'base':base, 'derivative':derivative}]))
@@ -66,13 +67,13 @@ def find_basic_changes(alignment):
     for column in alignment:
         if column['elem1'] != column['elem2']:
             if column['elem1'] == None:
-                changes.append(Change('insert', surface_i*2, column['elem1'], column['elem2']))
+                changes.append(Change('insert', surface_i*2, [column['elem1']], [column['elem2']]))
                 # surface_i does not increment
             elif column['elem2'] == None:
-                changes.append(Change('delete', surface_i*2+1, column['elem1'], column['elem2']))
+                changes.append(Change('delete', surface_i*2+1, [column['elem1']], [column['elem2']]))
                 surface_i += 1
             else:
-                changes.append(Change('mutate', surface_i*2+1, column['elem1'], column['elem2']))
+                changes.append(Change('mutate', surface_i*2+1, [column['elem1']], [column['elem2']]))
                 surface_i += 1
         else:
             surface_i += 1
@@ -92,4 +93,32 @@ def create_change_possibilities(change, alignment, side='both'):
         change_possibilities.append(new_change)
 
     return change_possibilities
+
+
+def group_changes(changes):
+    """Consolidate same-position insertions and deletions into single changes.
+    """
+    insertions = [c for c in changes if c.change_type == 'insert']
+    deletions = [c for c in changes if c.change_type == 'delete']
+    mutations = [c for c in changes if c.change_type == 'mutate']
+    inserted_locations = [ins.position for ins in insertions]
+
+    grouped_insertions = []
+    for i, ins in enumerate(insertions):
+        if i > 0:
+            if ins.position == insertions[i-1].position:
+                grouped_insertions[-1].output_material += ins.output_material
+                continue
+        grouped_insertions.append(ins)
+
+
+    grouped_deletions = []
+    for i, dlt in enumerate(deletions):
+        if i > 0:
+            if dlt.position == deletions[i-1].position+2 and dlt.position-1 not in inserted_locations:
+                grouped_deletions[-1].input_material += dlt.input_material
+                continue
+        grouped_deletions.append(dlt)
+
+    return sorted(grouped_insertions + grouped_deletions + mutations, key=lambda x: x.position)
 
