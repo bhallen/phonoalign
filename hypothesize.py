@@ -5,6 +5,8 @@
 ## Based on learner.js (by Michael Becker and Blake Allen)
 
 import itertools
+import collections
+from collections import defaultdict
 
 
 class Change(object):
@@ -20,7 +22,7 @@ class Change(object):
         return '{0} {1} to {2} at {3}'.format(self.change_type, self.input_material, self.output_material, self.position)
 
     def __str__(self):
-       return __repr__(self)
+       return self.__repr__()
 
 
 class Hypothesis(object):
@@ -32,10 +34,10 @@ class Hypothesis(object):
     def __repr__(self):
         # needs aesthetic improvement
         example_count = min(5, len(self.associated_forms))
-        return '{0}\n{1}...\n'.format(self.changes, [''.join([s for s in form['base'] if s != None]) for form in self.associated_forms[:example_count]])
+        return '{0}\n{1}...'.format(self.changes, [''.join([s for s in form['base'] if s != None]) for form in self.associated_forms[:example_count]])
 
     def __str__(self):
-       return __repr__(self)
+       return self.__repr__()
 
 
 
@@ -53,8 +55,10 @@ def create_and_distill_hypotheses(alignments):
         product = list(itertools.product(*possibilities_for_all_changes))
         for cp in product:
             unfiltered_hypotheses.append(Hypothesis(cp, [{'base':base, 'derivative':derivative}]))
+    
+    combined_hypotheses = combine_identical_hypotheses(unfiltered_hypotheses)
 
-    return unfiltered_hypotheses
+    return combined_hypotheses
 
 
 
@@ -122,3 +126,89 @@ def group_changes(changes):
 
     return sorted(grouped_insertions + grouped_deletions + mutations, key=lambda x: x.position)
 
+
+def combine_identical_hypotheses(hypotheses):
+    """Combine hypotheses with the same Change objects, yielding hypotheses with associated assoc_forms
+    that are the superset of component hypotheses.
+    """
+    temp_dict = defaultdict(list)
+    for h in hypotheses:
+        temp_dict[str(h.changes)].append(h)
+
+    grouped_hypotheses = []
+    for gh in temp_dict:
+        assoc_forms = [h.associated_forms[0] for h in temp_dict[gh]]
+        grouped_hypotheses.append(Hypothesis(temp_dict[gh][0].changes, assoc_forms))
+
+    return grouped_hypotheses
+
+
+def apply_hypothesis(word, hypothesis):
+    """Apply the changes in a hypothesis to a (base) word.
+    """
+
+    def apply_change(current_base, current_derivative, change):
+        """Use the given set of changes to derive a new form from the base word.
+        May be only one intermediate step in the application of multiple
+        changes associated with a single hypothesis/sublexicon.
+        """
+        print(current_derivative)
+        print(change)
+        change_position = make_index_positive(current_base, change.position)
+
+        changed_base = current_base[:]
+        changed_derivative = current_derivative[:]
+
+        if change.change_type == 'insert':
+            changed_base[change_position] = [None for s in change.output_material]
+            changed_derivative[change_position] = change.output_material
+        if change.change_type == 'delete':
+            for i, s in enumerate(change.input_material):
+                changed_derivative[change_position+(i*2)] = None
+        if change.change_type == 'mutate':
+            for i, s in enumerate(change.output_material):
+                changed_derivative[change_position+(i*2)] = s
+
+        return (changed_base, changed_derivative)
+
+    def join_it(iterable, delimiter):
+        """Intersperse the delimiter between all elements of the iterable, as well as at the beginning and end.
+        """
+        yield delimiter
+        it = iter(iterable)
+        yield next(it)
+        for x in it:
+            yield delimiter
+            yield x
+        yield delimiter
+
+    current_base = list(join_it(word, None))
+    current_derivative = list(join_it(word, None))
+
+    for c in hypothesis.changes:
+        current_base, current_derivative = apply_change(current_base, current_derivative, c)
+
+    return linearize_word(current_derivative)
+
+
+def make_index_positive(word, index):
+    """Return positive index based on word.
+    """
+    if index >= 0:
+        return index
+    else:
+        return len(word) + index
+
+
+def linearize_word(word):
+    """Create a space-spaced string from a list-formatted word (even one with Nones).
+    """
+    def flatten(l):
+        for el in l:
+            if isinstance(el, collections.Iterable) and not isinstance(el, str):
+                for sub in flatten(el):
+                    yield sub
+            else:
+                yield el
+    flat_noneless = [s for s in list(flatten(word)) if s != None]
+    return ' '.join(flat_noneless)
