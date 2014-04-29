@@ -12,4 +12,4 @@ Use SLL-style hypothesis distillation to improve alignments
 
 
 # Credits
-Based on the aligner used in the Allen & Becker Sublexical Learner (** location **), which was in turn based on Peter Kleiweg's Levenshtein demo ( http://www.let.rug.nl/~kleiweg/lev/ ).
+Based on the aligner used in the Allen & Becker Sublexical Learner ( http://sublexical.phonologist.org/ ), which was in turn based on Peter Kleiweg's Levenshtein demo ( http://www.let.rug.nl/~kleiweg/lev/ ).
