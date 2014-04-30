@@ -33,5 +33,3 @@ with open('ex_pairs.txt', 'U') as test_file:
 
     res = hypothesize.create_and_distill_hypotheses(all_alignments)
     print(res)
-
-    print(hypothesize.apply_hypothesis(['p','l','a','t'], res[0]))

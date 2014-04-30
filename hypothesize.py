@@ -34,7 +34,7 @@ class Hypothesis(object):
     def __repr__(self):
         # needs aesthetic improvement
         example_count = min(5, len(self.associated_forms))
-        return '{0}\n{1}...'.format(self.changes, [''.join([s for s in form['base'] if s != None]) for form in self.associated_forms[:example_count]])
+        return str(self.changes)
 
     def __str__(self):
        return self.__repr__()
@@ -57,8 +57,12 @@ def create_and_distill_hypotheses(alignments):
             unfiltered_hypotheses.append(Hypothesis(cp, [{'base':base, 'derivative':derivative}]))
     
     combined_hypotheses = combine_identical_hypotheses(unfiltered_hypotheses)
+    combined_hypotheses.sort(key=lambda h: len(h.associated_forms))
+    combined_hypotheses.reverse()
 
-    return combined_hypotheses
+    distilled_hypotheses = remove_subset_hypotheses(combined_hypotheses)
+
+    return distilled_hypotheses
 
 
 
@@ -144,7 +148,8 @@ def combine_identical_hypotheses(hypotheses):
 
 
 def apply_hypothesis(word, hypothesis):
-    """Apply the changes in a hypothesis to a (base) word.
+    """Apply the changes in a hypothesis to a (base) word. Base word can be either
+    a list of segments (no Nones) or a space-spaced string.
     """
 
     def apply_change(current_base, current_derivative, change):
@@ -152,8 +157,6 @@ def apply_hypothesis(word, hypothesis):
         May be only one intermediate step in the application of multiple
         changes associated with a single hypothesis/sublexicon.
         """
-        print(current_derivative)
-        print(change)
         change_position = make_index_positive(current_base, change.position)
 
         changed_base = current_base[:]
@@ -182,11 +185,17 @@ def apply_hypothesis(word, hypothesis):
             yield x
         yield delimiter
 
+    if isinstance(word, str):
+        word = word.split(' ')
+
     current_base = list(join_it(word, None))
     current_derivative = list(join_it(word, None))
 
-    for c in hypothesis.changes:
-        current_base, current_derivative = apply_change(current_base, current_derivative, c)
+    try:
+        for c in hypothesis.changes:
+            current_base, current_derivative = apply_change(current_base, current_derivative, c)
+    except:
+        return 'incompatible'
 
     return linearize_word(current_derivative)
 
@@ -212,3 +221,22 @@ def linearize_word(word):
                 yield el
     flat_noneless = [s for s in list(flatten(word)) if s != None]
     return ' '.join(flat_noneless)
+
+
+def remove_subset_hypotheses(hypotheses):
+    """Condenses the list of hypotheses about the entire dataset into the
+    minimum number required to account for all base-derivative pairs.
+    """
+    small_to_large = hypotheses[::-1]
+    for i, small in enumerate(small_to_large):
+        large_h_derivatives = []
+        for j, large in enumerate(hypotheses):
+            if small != 'purgeable' and large != 'purgeable' and large != small:
+                small_h_derivatives = [linearize_word(w['derivative']) for w in small.associated_forms]
+                small_h_bases = [linearize_word(w['base']) for w in small.associated_forms]
+                large_h_derivatives += [apply_hypothesis(base, large) for base in small_h_bases]
+                if set(small_h_derivatives) <= set(large_h_derivatives):
+                    hypotheses[len(hypotheses)-1-i] = 'purgeable'
+                    break
+
+    return [h for h in hypotheses if h != 'purgeable']
