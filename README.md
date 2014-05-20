@@ -4,11 +4,10 @@ PhonoAlign
 Generates phonologically aware alignments of morphologically related forms; extracts useful information from those alignments
 
 ## Current goal:
-Use SLL-style hypothesis distillation to improve alignments
+Set up command line interface, I/O
 
 ## Additional goals:
-1. Generate counts of segment--segment mappings
-2. Create an alignment mode that separates stem from affix
+1. Create an alignment mode that separates stem from affix
 
 
 # Credits
