@@ -25,9 +25,9 @@ class Aligner(object):
 
     def read_feature_file(self, feature_file):
         with open(feature_file) as ffile:
-            instring = ffile.read().split('\n')
+            instring = ffile.read().rstrip().split('\n')
             colnames = instring[0].split('\t')
-            segments = [line.split('\t') for line in instring[1:]][:-1]
+            segments = [line.split('\t') for line in instring[1:]]
             feature_dict = {}
             for segment in segments:
                 values_dict = {}
