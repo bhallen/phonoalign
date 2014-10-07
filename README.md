@@ -1,13 +1,8 @@
-PhonoAlign
+PyLexical
 ===================
 
-Generates phonologically aware alignments of morphologically related forms; extracts useful information from those alignments
+An implementation of the sublexical learner (Allen & Becker in progress) in Python 3
 
-## Current goal:
-Set up command line interface, I/O
-
-## Additional goals:
-1. Create an alignment mode that separates stem from affix
 
 
 # Credits
