@@ -43,7 +43,7 @@ class Hypothesis(object):
 
 
 
-def create_and_distill_hypotheses(alignments):
+def create_and_reduce_hypotheses(alignments):
 
     unfiltered_hypotheses = []
     for alignment in alignments:
@@ -60,9 +60,9 @@ def create_and_distill_hypotheses(alignments):
     combined_hypotheses.sort(key=lambda h: len(h.associated_forms))
     combined_hypotheses.reverse()
 
-    distilled_hypotheses = remove_subset_hypotheses(combined_hypotheses)
+    reduced_hypotheses = reduce_hypotheses(combined_hypotheses)
 
-    return distilled_hypotheses
+    return reduced_hypotheses
 
 
 
@@ -223,20 +223,34 @@ def linearize_word(word):
     return ' '.join(flat_noneless)
 
 
-def remove_subset_hypotheses(hypotheses):
+def reduce_hypotheses(hypotheses):
     """Condenses the list of hypotheses about the entire dataset into the
     minimum number required to account for all base-derivative pairs.
     """
-    small_to_large = hypotheses[::-1]
-    for i, small in enumerate(small_to_large):
-        large_h_derivatives = []
-        for j, large in enumerate(hypotheses):
-            if small != 'purgeable' and large != 'purgeable' and large != small:
-                small_h_derivatives = [linearize_word(w['derivative']) for w in small.associated_forms]
-                small_h_bases = [linearize_word(w['base']) for w in small.associated_forms]
-                large_h_derivatives += [apply_hypothesis(base, large) for base in small_h_bases]
-                if set(small_h_derivatives) <= set(large_h_derivatives):
-                    hypotheses[len(hypotheses)-1-i] = 'purgeable'
-                    break
+    # First step: check to see if any small hypotheses can be consumed by any single larger one
+    for j, large in enumerate(hypotheses): # j = potential consumer, will be at least as large as consumed (i)
+        for i, small in enumerate(hypotheses[::-1]): # can be consumed
+            if small != 'purgeable' and large != 'purgeable' and small != large:
+                consumabilities = []
+                for small_base, small_derivative in small.associated_forms:
+                    large_predicted_derivative = apply_hypothesis(small_base, large)
+                    consumabilities.append(small_derivative == large_predicted_derivative)
+                if False not in consumabilities: # if there are no forms in small that large cannot account for
+                    for bd in small.associated_forms:
+                        if bd not in large.associated_forms:
+                            large.associated_forms.append(bd)
+                    hypotheses[j] = 'purgeable'
+
+    # small_to_large = hypotheses[::-1]
+    # for i, small in enumerate(small_to_large):
+    #     large_h_derivatives = []
+    #     for j, large in enumerate(hypotheses):
+    #         if small != 'purgeable' and large != 'purgeable' and large != small:
+    #             small_h_derivatives = [linearize_word(w['derivative']) for w in small.associated_forms]
+    #             small_h_bases = [linearize_word(w['base']) for w in small.associated_forms]
+    #             large_h_derivatives += [apply_hypothesis(base, large) for base in small_h_bases]
+    #             if set(small_h_derivatives) <= set(large_h_derivatives):
+    #                 hypotheses[len(hypotheses)-1-i] = 'purgeable'
+    #                 break
 
     return [h for h in hypotheses if h != 'purgeable']

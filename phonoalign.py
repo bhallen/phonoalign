@@ -28,7 +28,7 @@ with open('ex_pairs.txt', 'U') as test_file:
             all_alignments.append(al)
 
 # Part of Option 2         
-distilled_hypotheses = hypothesize.create_and_distill_hypotheses(all_alignments)
+distilled_hypotheses = hypothesize.create_and_reduce_hypotheses(all_alignments)
 # hypothesis contexts -> selected_alignments
 for h in distilled_hypotheses:
     for bd in h.associated_forms:
