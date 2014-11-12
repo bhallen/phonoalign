@@ -28,19 +28,22 @@ with open('ex_pairs.txt', 'U') as test_file:
             all_alignments.append(al)
 
 # Part of Option 2         
-distilled_hypotheses = hypothesize.create_and_reduce_hypotheses(all_alignments)
-# hypothesis contexts -> selected_alignments
-for h in distilled_hypotheses:
-    for bd in h.associated_forms:
-        alignment = []
-        z = zip(bd['base'], bd['derivative'])
-        for base_seg, deriv_seg in z:
-            alignment.append({'elem1':base_seg, 'elem2':deriv_seg})
-        selected_alignments.append(alignment)
+reduced_hypotheses = hypothesize.create_and_reduce_hypotheses(all_alignments)
+print(reduced_hypotheses)
 
-# Finally:
-cd = correspondence.count_correspondences(selected_alignments)
-print(cd)
+
+# # hypothesis contexts -> selected_alignments
+# for h in distilled_hypotheses:
+#     for bd in h.associated_forms:
+#         alignment = []
+#         z = zip(bd['base'], bd['derivative'])
+#         for base_seg, deriv_seg in z:
+#             alignment.append({'elem1':base_seg, 'elem2':deriv_seg})
+#         selected_alignments.append(alignment)
+
+# # Finally:
+# cd = correspondence.count_correspondences(selected_alignments)
+# print(cd)
 
 
 

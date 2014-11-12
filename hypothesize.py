@@ -46,6 +46,7 @@ class Hypothesis(object):
 def create_and_reduce_hypotheses(alignments):
 
     unfiltered_hypotheses = []
+    all_bd_pairs = []
     for alignment in alignments:
         base = [column['elem1'] for column in alignment]
         derivative = [column['elem2'] for column in alignment]
@@ -55,12 +56,13 @@ def create_and_reduce_hypotheses(alignments):
         product = list(itertools.product(*possibilities_for_all_changes))
         for cp in product:
             unfiltered_hypotheses.append(Hypothesis(cp, [{'base':base, 'derivative':derivative}]))
+        all_bd_pairs.append((base,derivative))
     
     combined_hypotheses = combine_identical_hypotheses(unfiltered_hypotheses)
     combined_hypotheses.sort(key=lambda h: len(h.associated_forms))
     combined_hypotheses.reverse()
 
-    reduced_hypotheses = reduce_hypotheses(combined_hypotheses)
+    reduced_hypotheses = reduce_hypotheses(combined_hypotheses, all_bd_pairs)
 
     return reduced_hypotheses
 
@@ -222,11 +224,14 @@ def linearize_word(word):
     flat_noneless = [s for s in list(flatten(word)) if s != None]
     return ' '.join(flat_noneless)
 
+def account_for_all(hypotheses, alignments):
+    pass
 
-def reduce_hypotheses(hypotheses):
+def reduce_hypotheses(hypotheses, all_bd_pairs):
     """Condenses the list of hypotheses about the entire dataset into the
     minimum number required to account for all base-derivative pairs.
     """
+    print(len(hypotheses))
     # First step: check to see if any small hypotheses can be consumed by any single larger one
     for j, large in enumerate(hypotheses): # j = potential consumer, will be at least as large as consumed (i)
         for i, small in enumerate(hypotheses[::-1]): # can be consumed
@@ -241,16 +246,25 @@ def reduce_hypotheses(hypotheses):
                             large.associated_forms.append(bd)
                     hypotheses[j] = 'purgeable'
 
-    # small_to_large = hypotheses[::-1]
-    # for i, small in enumerate(small_to_large):
-    #     large_h_derivatives = []
-    #     for j, large in enumerate(hypotheses):
-    #         if small != 'purgeable' and large != 'purgeable' and large != small:
-    #             small_h_derivatives = [linearize_word(w['derivative']) for w in small.associated_forms]
-    #             small_h_bases = [linearize_word(w['base']) for w in small.associated_forms]
-    #             large_h_derivatives += [apply_hypothesis(base, large) for base in small_h_bases]
-    #             if set(small_h_derivatives) <= set(large_h_derivatives):
-    #                 hypotheses[len(hypotheses)-1-i] = 'purgeable'
-    #                 break
+    hypotheses = [h for h in hypotheses if h != 'purgeable']
+
+    return hypotheses # TEMP
+
+    # Second step: check for smallest number of adequate hypotheses
+    combinations = itertools.chain.from_iterable([itertools.combinations(hypotheses, n) for n in range(1,len(hypotheses))])
+    for combo in combinations:
+        # print(combo)
+        # print(account_for_all(combo, all_bd_pairs))
+        if account_for_all(combo, all_bd_pairs):
+            # winner found! Add missing contexts to their respective winners
+            for bd_pair in all_bd_pairs:
+                for hypothesis in combo:
+                    if apply_hypothesis(bd_pair[0], hypothesis) == bd_pair[1]:
+                        form = {'base':bd_pair[0], 'derivative':bd_pair[1]}
+                        if form not in hypothesis.associated_forms:
+                            hypothesis.associated_forms.append(form) # does combo actually get modified here? Double-check! 
+                            break
+            return combo
+
 
     return [h for h in hypotheses if h != 'purgeable']
