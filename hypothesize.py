@@ -48,11 +48,11 @@ def create_and_reduce_hypotheses(alignments):
     unfiltered_hypotheses = []
     all_bd_pairs = []
     for alignment in alignments:
-        base = [column['elem1'] for column in alignment]
-        derivative = [column['elem2'] for column in alignment]
+        base = linearize_word([column['elem1'] for column in alignment])
+        derivative = linearize_word([column['elem2'] for column in alignment])
         basic_changes = find_basic_changes(alignment)
         grouped_changes = group_changes(basic_changes)
-        possibilities_for_all_changes = [create_change_possibilities(c, alignment) for c in grouped_changes]
+        possibilities_for_all_changes = [create_change_possibilities(c, base) for c in grouped_changes]
         product = list(itertools.product(*possibilities_for_all_changes))
         for cp in product:
             unfiltered_hypotheses.append(Hypothesis(cp, [{'base':base, 'derivative':derivative}]))
@@ -91,7 +91,7 @@ def find_basic_changes(alignment):
     return changes
 
 
-def create_change_possibilities(change, alignment, side='both'):
+def create_change_possibilities(change, base, side='both'):
     """Given a change with segments as input and output and a positive index as position,
     return a list of changes with different positions/inputs/outputs.
     """
@@ -99,7 +99,8 @@ def create_change_possibilities(change, alignment, side='both'):
     if side in ['left', 'both']:
         change_possibilities.append(change)
     if side in ['right', 'both']:
-        new_change = Change(change.change_type, -(len(alignment)*2-1-change.position), change.input_material, change.output_material)
+        noned_base = add_nones(base)
+        new_change = Change(change.change_type, -(len(noned_base)-change.position), change.input_material, change.output_material)
         change_possibilities.append(new_change)
 
     return change_possibilities
@@ -149,6 +150,24 @@ def combine_identical_hypotheses(hypotheses):
     return grouped_hypotheses
 
 
+def add_nones(word):
+        """Change word into a list and add None at its beginning, end, and between every other pair of elements. Works whether the word is a str or a list.
+        """
+        def yield_it(word_string):
+            yield None
+            it = iter(word_string)
+            yield next(it)
+            for x in it:
+                yield None
+                yield x
+            yield None
+
+        if isinstance(word, str):
+            return list(yield_it(word.split(' ')))
+        else:
+            return list(yield_it(word))
+
+
 def apply_hypothesis(word, hypothesis):
     """Apply the changes in a hypothesis to a (base) word. Base word can be either
     a list of segments (no Nones) or a space-spaced string.
@@ -176,22 +195,8 @@ def apply_hypothesis(word, hypothesis):
 
         return (changed_base, changed_derivative)
 
-    def join_it(iterable, delimiter):
-        """Intersperse the delimiter between all elements of the iterable, as well as at the beginning and end.
-        """
-        yield delimiter
-        it = iter(iterable)
-        yield next(it)
-        for x in it:
-            yield delimiter
-            yield x
-        yield delimiter
-
-    if isinstance(word, str):
-        word = word.split(' ')
-
-    current_base = list(join_it(word, None))
-    current_derivative = list(join_it(word, None))
+    current_base = list(add_nones(word))
+    current_derivative = list(add_nones(word))
 
     try:
         for c in hypothesis.changes:
@@ -224,37 +229,43 @@ def linearize_word(word):
     flat_noneless = [s for s in list(flatten(word)) if s != None]
     return ' '.join(flat_noneless)
 
-def account_for_all(hypotheses, alignments):
-    pass
+
+def account_for_all(hypotheses, all_bd_pairs):
+    for base, derivative in all_bd_pairs:
+        accounted_for_by_each = [apply_hypothesis(base, h) == derivative for h in hypotheses]
+        if True not in accounted_for_by_each:
+            return False
+    return True
+
 
 def reduce_hypotheses(hypotheses, all_bd_pairs):
     """Condenses the list of hypotheses about the entire dataset into the
     minimum number required to account for all base-derivative pairs.
     """
-    print(len(hypotheses))
+    reversed_hypotheses = hypotheses[::-1]
     # First step: check to see if any small hypotheses can be consumed by any single larger one
     for j, large in enumerate(hypotheses): # j = potential consumer, will be at least as large as consumed (i)
-        for i, small in enumerate(hypotheses[::-1]): # can be consumed
+        for i, small in enumerate(reversed_hypotheses): # can be consumed
             if small != 'purgeable' and large != 'purgeable' and small != large:
-                consumabilities = []
-                for small_base, small_derivative in small.associated_forms:
+                consumabilities = [] # could probably be refactored so as not to need to determine all consumabilities (only until failure)
+                for associated_form in small.associated_forms:
+                    small_base = associated_form['base']
+                    small_derivative = associated_form['derivative']
                     large_predicted_derivative = apply_hypothesis(small_base, large)
                     consumabilities.append(small_derivative == large_predicted_derivative)
                 if False not in consumabilities: # if there are no forms in small that large cannot account for
                     for bd in small.associated_forms:
                         if bd not in large.associated_forms:
                             large.associated_forms.append(bd)
-                    hypotheses[j] = 'purgeable'
+                    hypotheses[-(i+1)] = 'purgeable'
+                    reversed_hypotheses[i] = 'purgeable'
+
 
     hypotheses = [h for h in hypotheses if h != 'purgeable']
-
-    return hypotheses # TEMP
 
     # Second step: check for smallest number of adequate hypotheses
     combinations = itertools.chain.from_iterable([itertools.combinations(hypotheses, n) for n in range(1,len(hypotheses))])
     for combo in combinations:
-        # print(combo)
-        # print(account_for_all(combo, all_bd_pairs))
         if account_for_all(combo, all_bd_pairs):
             # winner found! Add missing contexts to their respective winners
             for bd_pair in all_bd_pairs:

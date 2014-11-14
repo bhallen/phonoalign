@@ -8,12 +8,12 @@ import correspondence
 import itertools
 
 
-alr = aligner.Aligner(feature_file='ex_features.txt', sub_penalty=3.0, tolerance=1.0)
+alr = aligner.Aligner(feature_file='default_feature_file.txt', sub_penalty=3.0, tolerance=1.0)
 
 all_alignments = []
 
 selected_alignments = []
-with open('ex_pairs.txt', 'U') as test_file:
+with open('tagalog_training.txt', 'U') as test_file:
     pairs = [line.split('\t') for line in test_file.read().rstrip().split('\n') if len(line) > 0]
     
     all_alignments = []
