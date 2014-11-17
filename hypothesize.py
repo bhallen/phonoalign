@@ -48,14 +48,14 @@ def create_and_reduce_hypotheses(alignments):
     unfiltered_hypotheses = []
     all_bd_pairs = []
     for alignment in alignments:
-        base = linearize_word([column['elem1'] for column in alignment])
-        derivative = linearize_word([column['elem2'] for column in alignment])
-        basic_changes = find_basic_changes(alignment)
+        base = linearize_word([column['elem1'] for column in alignment[0]])
+        derivative = linearize_word([column['elem2'] for column in alignment[0]])
+        basic_changes = find_basic_changes(alignment[0])
         grouped_changes = group_changes(basic_changes)
         possibilities_for_all_changes = [create_change_possibilities(c, base) for c in grouped_changes]
         product = list(itertools.product(*possibilities_for_all_changes))
         for cp in product:
-            unfiltered_hypotheses.append(Hypothesis(cp, [{'base':base, 'derivative':derivative}]))
+            unfiltered_hypotheses.append(Hypothesis(cp, [{'base':base, 'derivative':derivative, 'probability':alignment[1]}]))
         all_bd_pairs.append((base,derivative))
     
     combined_hypotheses = combine_identical_hypotheses(unfiltered_hypotheses)
@@ -279,3 +279,17 @@ def reduce_hypotheses(hypotheses, all_bd_pairs):
 
 
     return [h for h in hypotheses if h != 'purgeable']
+
+
+def add_zero_probability_forms(hypotheses):
+    """Add forms from every hypothesis A to every other hypothesis B with a probability of 0 (if a form is not already in hypothesis B).
+    """
+    all_bases = [af['base'] for hypothesis in hypotheses for af in hypothesis.associated_forms]
+
+    for hypothesis in hypotheses:
+        these_bases = [af['base'] for af in hypothesis.associated_forms]
+        for base in all_bases:
+            if base not in these_bases:
+                hypothesis.associated_forms.append({'base':base, 'derivative':apply_hypothesis(base,hypothesis), 'probability': 0.0})
+
+    return hypotheses
