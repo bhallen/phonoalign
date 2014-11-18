@@ -282,7 +282,7 @@ def reduce_hypotheses(hypotheses, all_bd_pairs):
 
 
 def add_zero_probability_forms(hypotheses):
-    """Add forms from every hypothesis A to every other hypothesis B with a probability of 0 (if a form is not already in hypothesis B).
+    """Add every form from every hypothesis A to every other hypothesis B with a probability of 0 if the form is not already in hypothesis B.
     """
     all_bases = [af['base'] for hypothesis in hypotheses for af in hypothesis.associated_forms]
 

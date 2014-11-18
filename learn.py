@@ -6,42 +6,31 @@ import csv
 
 import aligner
 import hypothesize
+import megatableau
+import optimizer
 
 
-alr = aligner.Aligner(feature_file='default_feature_file.txt', sub_penalty=3.0, tolerance=1.0)
+alr = aligner.Aligner(feature_file='en_features.txt', sub_penalty=3.0, tolerance=1.0)
 
 alignments = []
 
-with open('ex2_pairs.txt', 'U') as training_file:
+with open('en_ex_train.txt') as training_file:
     trainingreader = csv.reader(training_file, delimiter='\t')
     training = [line for line in trainingreader if len(line) > 0]
     training = [line[:2]+[float(line[2])] if len(line) == 3 else line[:2]+[1.0] for line in training]
 
     for triple in training:
-        for alignment in alr.align(triple[0].split(' '), triple[1].split(' ')):
+        for alignment in alr.align(triple[0].split(' '), triple[1].split(' ')): # To-do: trim any extra spaces off
             alignments.append([alignment]+[triple[2]])
 
     reduced_hypotheses = hypothesize.create_and_reduce_hypotheses(alignments)
-    # print(reduced_hypotheses)
 
     ready_for_grammars = hypothesize.add_zero_probability_forms(reduced_hypotheses)
-    for h in ready_for_grammars:
-        print(h)
-        print(h.associated_forms)
 
+    with open('en_constraints.txt') as con_file:
+        conreader = csv.reader(con_file, delimiter='\t')
+        constraints = [c[0] for c in conreader if len(c) > 0]
 
-# # hypothesis contexts -> selected_alignments
-# for h in distilled_hypotheses:
-#     for bd in h.associated_forms:
-#         alignment = []
-#         z = zip(bd['base'], bd['derivative'])
-#         for base_seg, deriv_seg in z:
-#             alignment.append({'elem1':base_seg, 'elem2':deriv_seg})
-#         selected_alignments.append(alignment)
-
-# # Finally:
-# cd = correspondence.count_correspondences(selected_alignments)
-# print(cd)
-
-
-
+        for h in ready_for_grammars:
+            mt = megatableau.MegaTableau(h, constraints)
+            optimizer.learn_weights(mt)
