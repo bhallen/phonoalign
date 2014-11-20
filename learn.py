@@ -6,8 +6,7 @@ import csv
 
 import aligner
 import hypothesize
-import megatableau
-import optimizer
+import phoment
 
 
 alr = aligner.Aligner(feature_file='en_features.txt', sub_penalty=3.0, tolerance=1.0)
@@ -25,12 +24,10 @@ with open('en_ex_train.txt') as training_file:
 
     reduced_hypotheses = hypothesize.create_and_reduce_hypotheses(alignments)
 
-    ready_for_grammars = hypothesize.add_zero_probability_forms(reduced_hypotheses)
+    sublexicons = hypothesize.add_zero_probability_forms(reduced_hypotheses)
 
     with open('en_constraints.txt') as con_file:
         conreader = csv.reader(con_file, delimiter='\t')
         constraints = [c[0] for c in conreader if len(c) > 0]
 
-        for h in ready_for_grammars:
-            mt = megatableau.MegaTableau(h, constraints)
-            optimizer.learn_weights(mt)
+        sublexicons, megatableaux = zip(*[hypothesize.add_grammar(s, constraints) for s in sublexicons])

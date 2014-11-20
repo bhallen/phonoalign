@@ -1,10 +1,69 @@
-''' A moduled used by maxent.py and phlearn.py to find the ideal weights for a tableau.
-'''
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 
-import megatableau
-import scipy, scipy.optimize
+#### ####
+#### Based on rdaland/PhoMEnt.git, commit 74f5c43997185aef2d29a7c7dfdac3b5acd760df, from May 2014 ####
+#### ####
+
+import sys
+from collections import defaultdict
 import math
+import re
+import scipy, scipy.optimize
 import numpy as np
+import hypothesize
+
+class MegaTableau(object):
+
+    """
+    A representation of tableaux for manipulation by the maxent learner.
+    Derived from a file of tab-delimited tableaux.
+    Contains the following attributes:
+        self.constraints -------- list of constraint names
+            this is found on the first line of the input file
+        self.weights ------------ a list of weights for constraints
+        self.tableau ------------ a dictionary of dictionaries:
+            {input: {output: [freq, violDic, maxentScore]}}
+            freq = float()
+            violDic = dictionary of constraint violations (integers). 
+                Keys are constraint indices, based on order of constraints in self.constraints
+            maxentScore = e**harmony. Initialized to zero (because harmony is undefined without weights).
+    Contains the following methods:
+        self.read_megt_file(megt_file) - moves the data from the .txt file to the attributes
+            self.weights is not populated.
+        self.read_weights_file(megt_file) - populates self.weights
+    """
+    
+    def __init__(self, sublexicon=None, constraints=None):
+        """
+        sublexicon -- a sublexicon (originally a hypothesis) from hypothesize.py
+        constraints -- a list of strings corresponding to the phonological constraints to be weighted
+        """
+        self.constraint_names = constraints
+        self.gaussian_priors = {}
+        self.tableau = defaultdict(dict)
+        if sublexicon and constraints:
+            self.constraints = self.create_re_constraints(constraints)
+            self.weights = np.zeros(len(self.constraints))
+            self.populate_tableau(sublexicon)
+
+
+    def create_re_constraints(self, constraints):
+        """To-do: add the ability to translate featural constraints
+        """
+        return [re.compile(c) for c in constraints]
+
+
+    def populate_tableau(self, sublexicon):
+        outputs = {}
+        for af in sublexicon.associated_forms:
+            violations = {}
+            for c in range(len(self.constraints)):
+                these_violations = len(self.constraints[c].findall(af['base']))
+                if these_violations > 0:
+                    violations[c] = these_violations
+            outputs[af['base']] = [af['probability'], violations, 0]
+        self.tableau = {'': outputs}
 
 ### HELPER FUNCTIONS FOR CALCULATING PROBABILITY ###
 
@@ -85,11 +144,6 @@ def neg_log_probability(weights, tableau, l1_mult=0.0, l2_mult=1.0):
     """ Returns just the negative log probability of the data.
     """
     return (nlpwg(weights, tableau, l1_mult, l2_mult))[0]
-
-def probability(weights, tableau, l1_mult=0.0, l2_mult=1.0):
-    """ Returns just the probability of the data.
-    """
-    return math.exp(-(nlpwg(weights, tableau, l1_mult, l2_mult))[0])
 
 
 ### OPTIMIZATION FUNCTION

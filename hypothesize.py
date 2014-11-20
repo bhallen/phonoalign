@@ -8,6 +8,8 @@ import itertools
 import collections
 from collections import defaultdict
 
+import phoment
+
 
 class Change(object):
 
@@ -25,11 +27,15 @@ class Change(object):
        return self.__repr__()
 
 
-class Hypothesis(object):
+class Sublexicon(object):
+    """Starts off as a hypothesis; will grow and compete with others, potentially becoming a sublexicon of the final grammar
+    """
 
     def __init__(self, changes, associated_forms):
         self.changes = changes
         self.associated_forms = associated_forms
+        self.constraint_names = None
+        self.weights = None
 
     def __repr__(self):
         # needs aesthetic improvement
@@ -55,7 +61,7 @@ def create_and_reduce_hypotheses(alignments):
         possibilities_for_all_changes = [create_change_possibilities(c, base) for c in grouped_changes]
         product = list(itertools.product(*possibilities_for_all_changes))
         for cp in product:
-            unfiltered_hypotheses.append(Hypothesis(cp, [{'base':base, 'derivative':derivative, 'probability':alignment[1]}]))
+            unfiltered_hypotheses.append(Sublexicon(cp, [{'base':base, 'derivative':derivative, 'probability':alignment[1]}]))
         all_bd_pairs.append((base,derivative))
     
     combined_hypotheses = combine_identical_hypotheses(unfiltered_hypotheses)
@@ -145,7 +151,7 @@ def combine_identical_hypotheses(hypotheses):
     grouped_hypotheses = []
     for gh in temp_dict:
         assoc_forms = [h.associated_forms[0] for h in temp_dict[gh]]
-        grouped_hypotheses.append(Hypothesis(temp_dict[gh][0].changes, assoc_forms))
+        grouped_hypotheses.append(Sublexicon(temp_dict[gh][0].changes, assoc_forms))
 
     return grouped_hypotheses
 
@@ -293,3 +299,15 @@ def add_zero_probability_forms(hypotheses):
                 hypothesis.associated_forms.append({'base':base, 'derivative':apply_hypothesis(base,hypothesis), 'probability': 0.0})
 
     return hypotheses
+
+
+def add_grammar(sublexicon, constraints):
+    mt = phoment.MegaTableau(sublexicon, constraints)
+    sublexicon.weights = phoment.learn_weights(mt)
+    sublexicon.constraint_names = constraints
+
+    for ur in mt.tableau:
+        for sr in ur:
+            print(sr)
+
+    return (sublexicon, mt)
